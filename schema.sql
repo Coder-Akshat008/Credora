@@ -1,166 +1,49 @@
--- =========================================================
--- CREDORA - SMART CREDIT & LOAN MANAGEMENT SYSTEM
--- =========================================================
+CREATE DATABASE IF NOT EXISTS credora_db;
+USE credora_db;
 
-DROP DATABASE IF EXISTS credora;
-
-CREATE DATABASE credora;
-
-USE credora;
-
-
--- =========================================================
--- 1. EMPLOYEE TABLE
--- =========================================================
-
-CREATE TABLE employee (
-    employee_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    phone VARCHAR(15),
-    role VARCHAR(50) NOT NULL,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    password VARCHAR(100) NOT NULL
-);
-
-
--- =========================================================
--- 2. CUSTOMER TABLE
--- =========================================================
-
-CREATE TABLE customer (
+-- 1. CUSTOMER TABLE (Supports FR1 & Soft Deletion)
+CREATE TABLE IF NOT EXISTS customer (
     customer_id INT AUTO_INCREMENT PRIMARY KEY,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
-    dob DATE,
-    gender VARCHAR(20),
-    phone VARCHAR(15),
-    email VARCHAR(100),
-    address VARCHAR(255),
-    employment_status VARCHAR(50),
-    monthly_income DECIMAL(12,2),
-    credit_score INT
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    phone VARCHAR(20) NOT NULL,
+    is_deleted TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-
--- =========================================================
--- 3. LOAN TYPE TABLE
--- =========================================================
-
-CREATE TABLE loan_type (
-    loan_type_id INT AUTO_INCREMENT PRIMARY KEY,
-    loan_type_name VARCHAR(80) NOT NULL,
-    description VARCHAR(255),
-    min_amount DECIMAL(12,2),
-    max_amount DECIMAL(12,2),
-    base_interest_rate DECIMAL(5,2)
-);
-
-
--- =========================================================
--- 4. LOAN TABLE
--- =========================================================
-
-CREATE TABLE loan (
+-- 2. LOAN TABLE (Supports FR2 & NFR1 Data Integrity)
+CREATE TABLE IF NOT EXISTS loan (
     loan_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,
-    loan_type_id INT NOT NULL,
-    employee_id INT NOT NULL,
-    loan_amount DECIMAL(12,2) NOT NULL,
-    interest_rate DECIMAL(5,2) NOT NULL,
-    tenure_months INT NOT NULL,
-    application_date DATE NOT NULL,
-    approval_date DATE,
-    loan_status VARCHAR(30) DEFAULT 'PENDING',
-
-    FOREIGN KEY (customer_id)
-        REFERENCES customer(customer_id),
-
-    FOREIGN KEY (loan_type_id)
-        REFERENCES loan_type(loan_type_id),
-
-    FOREIGN KEY (employee_id)
-        REFERENCES employee(employee_id)
+    principal_amount DECIMAL(15, 2) NOT NULL CHECK (principal_amount > 0),
+    remaining_balance DECIMAL(15, 2) NOT NULL CHECK (remaining_balance >= 0),
+    interest_rate DECIMAL(5, 2) NOT NULL CHECK (interest_rate >= 0),
+    tenure_months INT NOT NULL CHECK (tenure_months > 0),
+    start_date DATE NOT NULL,
+    loan_status ENUM('APPROVED', 'CLOSED', 'DEFAULTED') DEFAULT 'APPROVED',
+    FOREIGN KEY (customer_id) REFERENCES customer(customer_id) ON DELETE RESTRICT
 );
 
-
--- =========================================================
--- 5. PAYMENT TABLE
--- =========================================================
-
-CREATE TABLE payment (
+-- 3. PAYMENT TABLE (Supports FR3 Repayment Processing)
+CREATE TABLE IF NOT EXISTS payment (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
     loan_id INT NOT NULL,
-    payment_date DATE NOT NULL,
-    amount DECIMAL(12,2) NOT NULL,
-    payment_mode VARCHAR(30),
-    payment_status VARCHAR(30) DEFAULT 'SUCCESS',
-
-    FOREIGN KEY (loan_id)
-        REFERENCES loan(loan_id)
+    amount_paid DECIMAL(15, 2) NOT NULL CHECK (amount_paid > 0),
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (loan_id) REFERENCES loan(loan_id) ON DELETE RESTRICT
 );
 
-
--- =========================================================
--- 6. DELINQUENCY TABLE
--- =========================================================
-
-CREATE TABLE delinquency (
+-- 4. DELINQUENCY TABLE (Supports FR4 Audit & Risk Tracking)
+CREATE TABLE IF NOT EXISTS delinquency (
     delinquency_id INT AUTO_INCREMENT PRIMARY KEY,
     loan_id INT NOT NULL,
     days_overdue INT NOT NULL,
-    outstanding_amount DECIMAL(12,2) NOT NULL,
+    outstanding_amount DECIMAL(15, 2) NOT NULL,
     delinquency_date DATE NOT NULL,
-    risk_level VARCHAR(30),
-    resolution_status VARCHAR(30) DEFAULT 'OPEN',
-
-    FOREIGN KEY (loan_id)
-        REFERENCES loan(loan_id)
+    risk_level ENUM('LOW', 'MEDIUM', 'HIGH') NOT NULL,
+    resolution_status ENUM('OPEN', 'RESOLVED') DEFAULT 'OPEN',
+    FOREIGN KEY (loan_id) REFERENCES loan(loan_id) ON DELETE RESTRICT
 );
-
-
--- =========================================================
--- INSERT EMPLOYEES
--- =========================================================
-
-INSERT INTO employee
-(name, email, phone, role, username, password)
-VALUES
-('System Admin',
- 'admin@credora.com',
- '9999999999',
- 'ADMIN',
- 'admin',
- 'admin123'),
-
-('Priya Sharma',
- 'priya@credora.com',
- '9876543210',
- 'LOAN OFFICER',
- 'priya',
- 'priya123'),
-
-('Rahul Mehta',
- 'rahul@credora.com',
- '9867001122',
- 'LOAN OFFICER',
- 'rahul',
- 'rahul123'),
-
-('Neha Patil',
- 'neha@credora.com',
- '9822003344',
- 'MANAGER',
- 'neha',
- 'neha123'),
-
-('Amit Joshi',
- 'amit@credora.com',
- '9819005566',
- 'LOAN OFFICER',
- 'amit',
- 'amit123');
-
 
 -- =========================================================
 -- INSERT LOAN TYPES
