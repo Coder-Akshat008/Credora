@@ -45,49 +45,6 @@ CREATE TABLE IF NOT EXISTS delinquency (
     FOREIGN KEY (loan_id) REFERENCES loan(loan_id) ON DELETE RESTRICT
 );
 
--- =========================================================
--- INSERT LOAN TYPES
--- =========================================================
-
-INSERT INTO loan_type
-(loan_type_name, description, min_amount, max_amount, base_interest_rate)
-VALUES
-('Personal Loan',
- 'General personal-purpose loan',
- 10000,
- 1000000,
- 12.50),
-
-('Education Loan',
- 'Loan for education expenses',
- 50000,
- 2000000,
- 9.50),
-
-('Home Loan',
- 'Loan for home purchase or construction',
- 500000,
- 10000000,
- 8.50),
-
-('Vehicle Loan',
- 'Loan for vehicle purchase',
- 50000,
- 3000000,
- 10.00),
-
-('Business Loan',
- 'Loan for small business requirements',
- 100000,
- 5000000,
- 11.25),
-
-('Medical Loan',
- 'Loan for medical and healthcare expenses',
- 25000,
- 1500000,
- 10.75);
-
 
 -- =========================================================
 -- INSERT CUSTOMERS
@@ -366,11 +323,7 @@ USE credora;
 
 SHOW TABLES;
 
-SELECT * FROM employee;
-
 SELECT * FROM customer;
-
-SELECT * FROM loan_type;
 
 SELECT * FROM loan;
 
