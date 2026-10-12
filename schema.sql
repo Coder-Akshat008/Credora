@@ -2,7 +2,7 @@ DROP DATABASE IF EXISTS credora_db;
 CREATE DATABASE IF NOT EXISTS credora_db;
 USE credora_db;
 
--- 1. CUSTOMER TABLE (Restored full_name column)
+-- 1. CUSTOMER TABLE
 CREATE TABLE IF NOT EXISTS customer (
     customer_id INT AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS customer (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. LOAN TABLE
+-- 2. LOAN TABLE (Includes start_date, application_date, approval_date)
 CREATE TABLE IF NOT EXISTS loan (
     loan_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,
@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS loan (
     remaining_balance DECIMAL(15, 2) DEFAULT 0.00 CHECK (remaining_balance >= 0),
     interest_rate DECIMAL(5, 2) NOT NULL CHECK (interest_rate >= 0),
     tenure_months INT NOT NULL CHECK (tenure_months > 0),
-    application_date DATE NOT NULL,
+    start_date DATE NOT NULL,
+    application_date DATE,
     approval_date DATE NULL,
     loan_status ENUM('APPROVED', 'PENDING', 'REJECTED', 'CLOSED', 'DEFAULTED') DEFAULT 'PENDING',
     FOREIGN KEY (customer_id) REFERENCES customer(customer_id) ON DELETE RESTRICT
@@ -84,20 +85,20 @@ VALUES
 -- =========================================================
 
 INSERT INTO loan
-(customer_id, loan_type_id, employee_id, principal_amount, remaining_balance, interest_rate, tenure_months, application_date, approval_date, loan_status)
+(customer_id, loan_type_id, employee_id, principal_amount, remaining_balance, interest_rate, tenure_months, start_date, application_date, approval_date, loan_status)
 VALUES
-(1, 1, 2, 300000, 300000, 12.50, 36, '2026-01-10', '2026-01-12', 'APPROVED'),
-(2, 2, 3, 500000, 500000, 9.50, 48, '2026-01-15', '2026-01-17', 'APPROVED'),
-(3, 5, 4, 1200000, 1200000, 11.25, 60, '2026-02-02', '2026-02-05', 'APPROVED'),
-(4, 2, 2, 250000, 250000, 9.50, 36, '2026-02-12', NULL, 'PENDING'),
-(5, 3, 4, 4500000, 4500000, 8.50, 180, '2026-02-20', '2026-02-24', 'APPROVED'),
-(6, 4, 3, 800000, 800000, 10.00, 60, '2026-03-01', '2026-03-03', 'APPROVED'),
-(7, 5, 2, 2000000, 2000000, 11.25, 72, '2026-03-08', NULL, 'PENDING'),
-(8, 1, 5, 150000, 150000, 12.50, 24, '2026-03-15', '2026-03-16', 'APPROVED'),
-(9, 4, 3, 950000, 950000, 10.00, 60, '2026-03-21', '2026-03-23', 'APPROVED'),
-(10, 1, 5, 200000, 200000, 12.50, 30, '2026-04-01', '2026-04-03', 'REJECTED'),
-(11, 6, 2, 300000, 300000, 10.75, 24, '2026-04-06', '2026-04-07', 'APPROVED'),
-(12, 2, 3, 150000, 150000, 9.50, 24, '2026-04-12', NULL, 'PENDING');
+(1, 1, 2, 300000, 300000, 12.50, 36, '2026-01-12', '2026-01-10', '2026-01-12', 'APPROVED'),
+(2, 2, 3, 500000, 500000, 9.50, 48, '2026-01-17', '2026-01-15', '2026-01-17', 'APPROVED'),
+(3, 5, 4, 1200000, 1200000, 11.25, 60, '2026-02-05', '2026-02-02', '2026-02-05', 'APPROVED'),
+(4, 2, 2, 250000, 250000, 9.50, 36, '2026-02-12', '2026-02-12', NULL, 'PENDING'),
+(5, 3, 4, 4500000, 4500000, 8.50, 180, '2026-02-24', '2026-02-20', '2026-02-24', 'APPROVED'),
+(6, 4, 3, 800000, 800000, 10.00, 60, '2026-03-03', '2026-03-01', '2026-03-03', 'APPROVED'),
+(7, 5, 2, 2000000, 2000000, 11.25, 72, '2026-03-08', '2026-03-08', NULL, 'PENDING'),
+(8, 1, 5, 150000, 150000, 12.50, 24, '2026-03-16', '2026-03-15', '2026-03-16', 'APPROVED'),
+(9, 4, 3, 950000, 950000, 10.00, 60, '2026-03-23', '2026-03-21', '2026-03-23', 'APPROVED'),
+(10, 1, 5, 200000, 200000, 12.50, 30, '2026-04-01', '2026-04-01', '2026-04-03', 'REJECTED'),
+(11, 6, 2, 300000, 300000, 10.75, 24, '2026-04-07', '2026-04-06', '2026-04-07', 'APPROVED'),
+(12, 2, 3, 150000, 150000, 9.50, 24, '2026-04-12', '2026-04-12', NULL, 'PENDING');
 
 
 -- =========================================================
@@ -133,6 +134,13 @@ VALUES
 (6, 22, 735000, '2026-05-20', 'HIGH', 'OPEN'),
 (9, 5, 920000, '2026-05-25', 'LOW', 'RESOLVED'),
 (11, 31, 270000, '2026-06-10', 'HIGH', 'OPEN');
+SELECT * FROM customer;
+
+-- 2. View all loans
+SELECT * FROM loan;
+
+-- 3. View all payment records
 SELECT * FROM payment;
 
+-- 4. View all delinquency records
 SELECT * FROM delinquency;
