@@ -1,13 +1,15 @@
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 // ============================================================================
-// ABSTRACT SUPERCLASS: INHERITANCE (1M) & BASE GUI TEMPLATE
+// ABSTRACT SUPERCLASS: INHERITANCE & BASE GUI TEMPLATE
 // ============================================================================
 abstract class BaseDatabaseModule extends JPanel {
     protected final Connection con;
@@ -17,7 +19,6 @@ abstract class BaseDatabaseModule extends JPanel {
         setLayout(new BorderLayout(10, 10));
     }
 
-    // THREAD (1M): Asynchronous database operation using SwingWorker (Non-blocking EDT)
     protected <T> void executeAsync(WorkerSupplier<T> bgTask, ResultHandler<T> onSuccess) {
         new SwingWorker<T, Void>() {
             @Override
@@ -36,19 +37,28 @@ abstract class BaseDatabaseModule extends JPanel {
                     Thread.currentThread().interrupt();
                     showError("Operation interrupted.");
                 } catch (ExecutionException e) {
+                    e.printStackTrace();
                     showError("Database Error: " + (e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
                 }
             }
         }.execute();
     }
 
-    // EXCEPTION HANDLING (1M): Standardized dialog helpers
     protected void showError(String msg) {
         JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     protected void showInfo(String msg) {
         JOptionPane.showMessageDialog(this, msg, "Success", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    protected DefaultTableModel createNonEditableModel(String[] headers) {
+        return new DefaultTableModel(headers, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
     }
 
     @FunctionalInterface
@@ -63,14 +73,16 @@ abstract class BaseDatabaseModule extends JPanel {
 }
 
 // ============================================================================
-// MODULE 1: CUSTOMER OPERATIONS (FR1 & JDBC CRUD: CREATE, READ, UPDATE, DELETE)
+// MODULE 1: CUSTOMER OPERATIONS
 // ============================================================================
 class CustomerModule extends BaseDatabaseModule {
-    private final DefaultTableModel tableModel = new DefaultTableModel(new String[]{"ID", "Name", "Email", "Phone"}, 0);
-    private final JTable table = new JTable(tableModel);
+    private final DefaultTableModel tableModel;
+    private final JTable table;
 
     public CustomerModule(Connection con) {
         super(con);
+        tableModel = createNonEditableModel(new String[]{"Customer ID", "Full Name", "Email", "Phone"});
+        table = new JTable(tableModel);
         initUI();
         loadCustomers();
     }
@@ -96,23 +108,25 @@ class CustomerModule extends BaseDatabaseModule {
         refreshBtn.addActionListener(e -> loadCustomers());
     }
 
-    // READ (JDBC CRUD)
     public void loadCustomers() {
         tableModel.setRowCount(0);
         executeAsync(() -> {
             String sql = "SELECT customer_id, full_name, email, phone FROM customer WHERE is_deleted = 0";
             try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
-                // COLLECTIONS (1M): Storing rows in Java List Collection
                 List<Object[]> rows = new ArrayList<>();
                 while (rs.next()) {
-                    rows.add(new Object[]{rs.getInt("customer_id"), rs.getString("full_name"), rs.getString("email"), rs.getString("phone")});
+                    rows.add(new Object[]{
+                        rs.getInt("customer_id"),
+                        rs.getString("full_name"),
+                        rs.getString("email"),
+                        rs.getString("phone")
+                    });
                 }
                 return rows;
             }
         }, rows -> rows.forEach(tableModel::addRow));
     }
 
-    // CREATE (JDBC CRUD)
     private void addCustomer() {
         JTextField nameF = new JTextField();
         JTextField emailF = new JTextField();
@@ -148,7 +162,6 @@ class CustomerModule extends BaseDatabaseModule {
         }
     }
 
-    // UPDATE (JDBC CRUD)
     private void updateCustomer() {
         int row = table.getSelectedRow();
         if (row == -1) { showError("Select a customer to update."); return; }
@@ -180,7 +193,6 @@ class CustomerModule extends BaseDatabaseModule {
         }
     }
 
-    // DELETE (JDBC CRUD - Soft Delete)
     private void softDeleteCustomer() {
         int row = table.getSelectedRow();
         if (row == -1) { showError("Select a customer to soft-delete."); return; }
@@ -203,13 +215,14 @@ class CustomerModule extends BaseDatabaseModule {
 }
 
 // ============================================================================
-// MODULE 2: LOAN LIFECYCLE MANAGEMENT (FR2)
+// MODULE 2: LOAN LIFECYCLE MANAGEMENT
 // ============================================================================
 class LoanModule extends BaseDatabaseModule {
-    private final DefaultTableModel tableModel = new DefaultTableModel(new String[]{"Loan ID", "Customer ID", "Principal", "Remaining", "Rate (%)", "Tenure (m)", "Start Date", "Status"}, 0);
+    private final DefaultTableModel tableModel;
 
     public LoanModule(Connection con) {
         super(con);
+        tableModel = createNonEditableModel(new String[]{"Loan ID", "Customer ID", "Customer Name", "Principal", "Remaining", "Rate (%)", "Tenure (m)", "Start Date", "Status"});
         initUI();
         loadLoans();
     }
@@ -232,14 +245,22 @@ class LoanModule extends BaseDatabaseModule {
     public void loadLoans() {
         tableModel.setRowCount(0);
         executeAsync(() -> {
-            String sql = "SELECT * FROM loan";
+            String sql = "SELECT l.loan_id, l.customer_id, c.full_name, l.principal_amount, l.remaining_balance, " +
+                         "l.interest_rate, l.tenure_months, l.start_date, l.loan_status " +
+                         "FROM loan l JOIN customer c ON l.customer_id = c.customer_id";
             try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
                 List<Object[]> rows = new ArrayList<>();
                 while (rs.next()) {
                     rows.add(new Object[]{
-                        rs.getInt("loan_id"), rs.getInt("customer_id"), rs.getDouble("principal_amount"),
-                        rs.getDouble("remaining_balance"), rs.getDouble("interest_rate"),
-                        rs.getInt("tenure_months"), rs.getDate("start_date"), rs.getString("loan_status")
+                        rs.getInt("loan_id"),
+                        rs.getInt("customer_id"),
+                        rs.getString("full_name"),
+                        rs.getBigDecimal("principal_amount"),
+                        rs.getBigDecimal("remaining_balance"),
+                        rs.getBigDecimal("interest_rate"),
+                        rs.getInt("tenure_months"),
+                        rs.getDate("start_date"),
+                        rs.getString("loan_status")
                     });
                 }
                 return rows;
@@ -264,20 +285,25 @@ class LoanModule extends BaseDatabaseModule {
         if (JOptionPane.showConfirmDialog(this, form, "Create Loan Record", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             try {
                 int cid = Integer.parseInt(custIdF.getText().trim());
-                double principal = Double.parseDouble(principalF.getText().trim());
-                double rate = Double.parseDouble(rateF.getText().trim());
+                BigDecimal principal = new BigDecimal(principalF.getText().trim()).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal rate = new BigDecimal(rateF.getText().trim()).setScale(2, RoundingMode.HALF_UP);
                 int tenure = Integer.parseInt(tenureF.getText().trim());
-                String date = startDateF.getText().trim();
+                Date startDate = Date.valueOf(startDateF.getText().trim());
+
+                if (principal.compareTo(BigDecimal.ZERO) <= 0 || rate.compareTo(BigDecimal.ZERO) < 0 || tenure <= 0) {
+                    showError("Please enter valid positive values for loan parameters.");
+                    return;
+                }
 
                 executeAsync(() -> {
                     String sql = "INSERT INTO loan (customer_id, principal_amount, remaining_balance, interest_rate, tenure_months, start_date, loan_status) VALUES (?, ?, ?, ?, ?, ?, 'APPROVED')";
                     try (PreparedStatement ps = con.prepareStatement(sql)) {
                         ps.setInt(1, cid);
-                        ps.setDouble(2, principal);
-                        ps.setDouble(3, principal);
-                        ps.setDouble(4, rate);
+                        ps.setBigDecimal(2, principal);
+                        ps.setBigDecimal(3, principal);
+                        ps.setBigDecimal(4, rate);
                         ps.setInt(5, tenure);
-                        ps.setDate(6, Date.valueOf(date));
+                        ps.setDate(6, startDate);
                         ps.executeUpdate();
                     }
                     return null;
@@ -295,7 +321,7 @@ class LoanModule extends BaseDatabaseModule {
 }
 
 // ============================================================================
-// MODULE 3: REPAYMENT PROCESSING WITH SQL TRANSACTIONS (FR3)
+// MODULE 3: REPAYMENT PROCESSING WITH SQL TRANSACTIONS
 // ============================================================================
 class RepaymentModule extends BaseDatabaseModule {
     public RepaymentModule(Connection con) {
@@ -319,9 +345,12 @@ class RepaymentModule extends BaseDatabaseModule {
         payBtn.addActionListener(e -> {
             try {
                 int loanId = Integer.parseInt(loanIdF.getText().trim());
-                double amount = Double.parseDouble(amountF.getText().trim());
+                BigDecimal amount = new BigDecimal(amountF.getText().trim()).setScale(2, RoundingMode.HALF_UP);
 
-                if (amount <= 0) { showError("Payment amount must be positive."); return; }
+                if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                    showError("Payment amount must be positive.");
+                    return;
+                }
 
                 executeAsync(() -> processTransaction(loanId, amount), res -> {
                     showInfo("Payment applied successfully. Balance updated.");
@@ -334,51 +363,49 @@ class RepaymentModule extends BaseDatabaseModule {
         });
     }
 
-    private Boolean processTransaction(int loanId, double amount) throws SQLException {
+    private Boolean processTransaction(int loanId, BigDecimal amount) throws SQLException {
         boolean originalAutoCommit = con.getAutoCommit();
         try {
-            con.setAutoCommit(false); // Begin SQL Transaction
+            con.setAutoCommit(false);
 
             String checkSql = "SELECT remaining_balance FROM loan WHERE loan_id = ? FOR UPDATE";
-            double currentBalance = 0;
+            BigDecimal currentBalance;
             try (PreparedStatement ps = con.prepareStatement(checkSql)) {
                 ps.setInt(1, loanId);
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
-                        currentBalance = rs.getDouble("remaining_balance");
+                        currentBalance = rs.getBigDecimal("remaining_balance");
                     } else {
                         throw new SQLException("Loan ID " + loanId + " does not exist.");
                     }
                 }
             }
 
-            if (amount > currentBalance) {
-                throw new SQLException("Payment exceeds remaining balance (" + currentBalance + ").");
+            if (amount.compareTo(currentBalance) > 0) {
+                throw new SQLException("Payment amount (" + amount + ") exceeds remaining balance (" + currentBalance + ").");
             }
 
-            // Insert payment log
             String paySql = "INSERT INTO payment (loan_id, amount_paid) VALUES (?, ?)";
             try (PreparedStatement ps = con.prepareStatement(paySql)) {
                 ps.setInt(1, loanId);
-                ps.setDouble(2, amount);
+                ps.setBigDecimal(2, amount);
                 ps.executeUpdate();
             }
 
-            // Update remaining loan balance
-            double newBalance = currentBalance - amount;
-            String status = (newBalance == 0) ? "CLOSED" : "APPROVED";
+            BigDecimal newBalance = currentBalance.subtract(amount);
+            String status = (newBalance.compareTo(BigDecimal.ZERO) == 0) ? "CLOSED" : "APPROVED";
             String updateSql = "UPDATE loan SET remaining_balance = ?, loan_status = ? WHERE loan_id = ?";
             try (PreparedStatement ps = con.prepareStatement(updateSql)) {
-                ps.setDouble(1, newBalance);
+                ps.setBigDecimal(1, newBalance);
                 ps.setString(2, status);
                 ps.setInt(3, loanId);
                 ps.executeUpdate();
             }
 
-            con.commit(); // Commit Transaction
+            con.commit();
             return true;
         } catch (SQLException ex) {
-            con.rollback(); // Rollback Transaction on failure
+            con.rollback();
             throw ex;
         } finally {
             con.setAutoCommit(originalAutoCommit);
@@ -387,13 +414,14 @@ class RepaymentModule extends BaseDatabaseModule {
 }
 
 // ============================================================================
-// MODULE 4: DELINQUENCY MONITORING (FR4)
+// MODULE 4: DELINQUENCY MONITORING
 // ============================================================================
 class DelinquencyModule extends BaseDatabaseModule {
-    private final DefaultTableModel tableModel = new DefaultTableModel(new String[]{"Delinquency ID", "Loan ID", "Days Overdue", "Outstanding", "Date", "Risk", "Status"}, 0);
+    private final DefaultTableModel tableModel;
 
     public DelinquencyModule(Connection con) {
         super(con);
+        tableModel = createNonEditableModel(new String[]{"Delinquency ID", "Loan ID", "Days Overdue", "Outstanding", "Date", "Risk", "Status"});
         initUI();
         loadDelinquencies();
     }
@@ -416,14 +444,18 @@ class DelinquencyModule extends BaseDatabaseModule {
     public void loadDelinquencies() {
         tableModel.setRowCount(0);
         executeAsync(() -> {
-            String sql = "SELECT * FROM delinquency";
+            String sql = "SELECT delinquency_id, loan_id, days_overdue, outstanding_amount, delinquency_date, risk_level, resolution_status FROM delinquency";
             try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
                 List<Object[]> rows = new ArrayList<>();
                 while (rs.next()) {
                     rows.add(new Object[]{
-                        rs.getInt("delinquency_id"), rs.getInt("loan_id"), rs.getInt("days_overdue"),
-                        rs.getDouble("outstanding_amount"), rs.getDate("delinquency_date"),
-                        rs.getString("risk_level"), rs.getString("resolution_status")
+                        rs.getInt("delinquency_id"),
+                        rs.getInt("loan_id"),
+                        rs.getInt("days_overdue"),
+                        rs.getBigDecimal("outstanding_amount"),
+                        rs.getDate("delinquency_date"),
+                        rs.getString("risk_level"),
+                        rs.getString("resolution_status")
                     });
                 }
                 return rows;
@@ -433,21 +465,23 @@ class DelinquencyModule extends BaseDatabaseModule {
 
     private void runAudit() {
         executeAsync(() -> {
-            String auditSql = "SELECT loan_id, remaining_balance, DATEDIFF(CURDATE(), start_date) AS days FROM loan WHERE loan_status = 'APPROVED' AND remaining_balance > 0 AND DATEDIFF(CURDATE(), start_date) > 30";
-            String insertSql = "INSERT INTO delinquency (loan_id, days_overdue, outstanding_amount, delinquency_date, risk_level, resolution_status) VALUES (?, ?, ?, CURDATE(), ?, 'OPEN')";
+            String auditSql = "SELECT loan_id, remaining_balance, GREATEST(DATEDIFF(CURDATE(), start_date) - 30, 0) AS overdue_days " +
+                              "FROM loan WHERE loan_status = 'APPROVED' AND remaining_balance > 0 AND DATEDIFF(CURDATE(), start_date) > 30";
+            String insertSql = "INSERT INTO delinquency (loan_id, days_overdue, outstanding_amount, delinquency_date, risk_level, resolution_status) " +
+                              "VALUES (?, ?, ?, CURDATE(), ?, 'OPEN')";
             
             int flaggedCount = 0;
             try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(auditSql)) {
                 while (rs.next()) {
                     int loanId = rs.getInt("loan_id");
-                    int days = rs.getInt("days");
-                    double bal = rs.getDouble("remaining_balance");
-                    String risk = days > 90 ? "HIGH" : (days > 60 ? "MEDIUM" : "LOW");
+                    int daysOverdue = rs.getInt("overdue_days");
+                    BigDecimal balance = rs.getBigDecimal("remaining_balance");
+                    String risk = daysOverdue > 90 ? "HIGH" : (daysOverdue > 60 ? "MEDIUM" : "LOW");
 
                     try (PreparedStatement ps = con.prepareStatement(insertSql)) {
                         ps.setInt(1, loanId);
-                        ps.setInt(2, days);
-                        ps.setDouble(3, bal);
+                        ps.setInt(2, daysOverdue);
+                        ps.setBigDecimal(3, balance);
                         ps.setString(4, risk);
                         ps.executeUpdate();
                         flaggedCount++;
@@ -463,13 +497,14 @@ class DelinquencyModule extends BaseDatabaseModule {
 }
 
 // ============================================================================
-// MODULE 5: DASHBOARD & AGGREGATE METRICS (FR5)
+// MODULE 5: DASHBOARD & AGGREGATE METRICS
 // ============================================================================
 class DashboardModule extends BaseDatabaseModule {
-    private final DefaultTableModel metricsModel = new DefaultTableModel(new String[]{"Metric Name", "Aggregated Value"}, 0);
+    private final DefaultTableModel metricsModel;
 
     public DashboardModule(Connection con) {
         super(con);
+        metricsModel = createNonEditableModel(new String[]{"Metric Name", "Aggregated Value"});
         initUI();
         loadDashboard();
     }
@@ -495,7 +530,7 @@ class DashboardModule extends BaseDatabaseModule {
 
             try (Statement st = con.createStatement()) {
                 try (ResultSet rs = st.executeQuery(sql1)) {
-                    if (rs.next()) stats.add(new Object[]{"Total Outstanding Principal", String.format("$%.2f", rs.getDouble(1))});
+                    if (rs.next()) stats.add(new Object[]{"Total Outstanding Principal", String.format("$%.2f", rs.getBigDecimal(1))});
                 }
                 try (ResultSet rs = st.executeQuery(sql2)) {
                     if (rs.next()) stats.add(new Object[]{"Active Approved Loans", rs.getInt(1)});
@@ -527,8 +562,7 @@ public class CredoraApplication extends JFrame {
 
     private void initDatabaseConnection() {
         try {
-            // Adjust JDBC URL, User, and Password as required by your MySQL environment
-            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/credora_db", "root", "password");
+            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/credora_db", "root", "sit@123");
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Failed to connect to Database: " + e.getMessage(), "Connection Error", JOptionPane.ERROR_MESSAGE);
             System.exit(1);
@@ -547,6 +581,9 @@ public class CredoraApplication extends JFrame {
     }
 
     public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new CredoraApplication().setVisible(true));
+    }
+}
         SwingUtilities.invokeLater(() -> new CredoraApplication().setVisible(true));
     }
 }
