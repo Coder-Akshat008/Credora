@@ -3,51 +3,39 @@ CREATE DATABASE IF NOT EXISTS credora_db;
 USE credora_db;
 
 -- 1. CUSTOMER TABLE
-CREATE TABLE IF NOT EXISTS customer (
+CREATE TABLE customer (
     customer_id INT AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
-    dob DATE,
-    gender ENUM('Male', 'Female', 'Other'),
-    phone VARCHAR(20) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
-    address TEXT,
-    employment_status ENUM('EMPLOYED', 'SELF-EMPLOYED', 'STUDENT', 'UNEMPLOYED'),
-    monthly_income DECIMAL(15, 2) DEFAULT 0.00,
-    credit_score INT CHECK (credit_score BETWEEN 300 AND 850),
+    phone VARCHAR(20) NOT NULL,
     is_deleted TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. LOAN TABLE (Includes start_date, application_date, approval_date)
-CREATE TABLE IF NOT EXISTS loan (
+-- 2. LOAN TABLE
+CREATE TABLE loan (
     loan_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,
-    loan_type_id INT,
-    employee_id INT,
     principal_amount DECIMAL(15, 2) NOT NULL CHECK (principal_amount > 0),
-    remaining_balance DECIMAL(15, 2) DEFAULT 0.00 CHECK (remaining_balance >= 0),
+    remaining_balance DECIMAL(15, 2) NOT NULL CHECK (remaining_balance >= 0),
     interest_rate DECIMAL(5, 2) NOT NULL CHECK (interest_rate >= 0),
     tenure_months INT NOT NULL CHECK (tenure_months > 0),
     start_date DATE NOT NULL,
-    application_date DATE,
-    approval_date DATE NULL,
-    loan_status ENUM('APPROVED', 'PENDING', 'REJECTED', 'CLOSED', 'DEFAULTED') DEFAULT 'PENDING',
+    loan_status ENUM('APPROVED', 'CLOSED', 'DEFAULTED') DEFAULT 'APPROVED',
     FOREIGN KEY (customer_id) REFERENCES customer(customer_id) ON DELETE RESTRICT
 );
 
 -- 3. PAYMENT TABLE
-CREATE TABLE IF NOT EXISTS payment (
+CREATE TABLE payment (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
     loan_id INT NOT NULL,
-    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     amount_paid DECIMAL(15, 2) NOT NULL CHECK (amount_paid > 0),
-    payment_mode ENUM('UPI', 'CARD', 'NET BANKING', 'BANK TRANSFER', 'CASH'),
-    payment_status ENUM('SUCCESS', 'PENDING', 'FAILED') DEFAULT 'SUCCESS',
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (loan_id) REFERENCES loan(loan_id) ON DELETE RESTRICT
 );
 
 -- 4. DELINQUENCY TABLE
-CREATE TABLE IF NOT EXISTS delinquency (
+CREATE TABLE delinquency (
     delinquency_id INT AUTO_INCREMENT PRIMARY KEY,
     loan_id INT NOT NULL,
     days_overdue INT NOT NULL,
@@ -58,89 +46,50 @@ CREATE TABLE IF NOT EXISTS delinquency (
     FOREIGN KEY (loan_id) REFERENCES loan(loan_id) ON DELETE RESTRICT
 );
 
+-- SEED DATA
+INSERT INTO customer (full_name, email, phone, is_deleted) VALUES 
+('Akshay Kulkarni', 'akshay@gmail.com', '9876500001', 0),
+('Sneha Patil', 'sneha@gmail.com', '9876500002', 0),
+('Rohan Mehta', 'rohan.m@gmail.com', '9876500003', 0),
+('Ananya Sharma', 'ananya.s@yahoo.com', '9876500004', 0),
+('Vikram Deshmukh', 'v.deshmukh@outlook.com', '9876500005', 0),
+('Priya Nair', 'priya.nair@gmail.com', '9876500006', 0),
+('Amitabh Joshi', 'ajoshi@rediffmail.com', '9876500007', 0),
+('Neha Verma', 'neha.verma@gmail.com', '9876500008', 0),
+('Siddharth Rao', 'sid.rao@gmail.com', '9876500009', 1);
 
--- =========================================================
--- INSERT CUSTOMERS
--- =========================================================
+INSERT INTO loan (customer_id, principal_amount, remaining_balance, interest_rate, tenure_months, start_date, loan_status) VALUES 
+(1, 300000.00, 250000.00, 12.50, 36, '2025-06-15', 'APPROVED'),
+(2, 500000.00, 420000.00, 9.50, 48, '2025-08-10', 'APPROVED'),
+(3, 150000.00, 0.00, 11.00, 12, '2024-01-10', 'CLOSED'),
+(4, 800000.00, 750000.00, 10.25, 60, '2025-03-01', 'APPROVED'),
+(5, 200000.00, 180000.00, 14.00, 24, '2025-04-20', 'DEFAULTED'),
+(6, 450000.00, 450000.00, 8.75, 36, '2026-01-05', 'APPROVED'),
+(7, 100000.00, 0.00, 13.00, 12, '2024-05-15', 'CLOSED'),
+(8, 600000.00, 580000.00, 10.50, 48, '2025-09-12', 'APPROVED');
 
-INSERT INTO customer
-(full_name, dob, gender, phone, email, address, employment_status, monthly_income, credit_score)
-VALUES
-('Akshay Kulkarni', '2002-04-18', 'Male', '9876500001', 'akshay@gmail.com', 'Pune, Maharashtra', 'EMPLOYED', 65000, 768),
-('Sneha Patil', '2001-09-12', 'Female', '9876500002', 'sneha@gmail.com', 'Nashik, Maharashtra', 'EMPLOYED', 58000, 742),
-('Rohan Deshmukh', '1999-12-05', 'Male', '9876500003', 'rohan@gmail.com', 'Mumbai, Maharashtra', 'SELF-EMPLOYED', 92000, 781),
-('Ananya Shah', '2003-06-21', 'Female', '9876500004', 'ananya@gmail.com', 'Ahmedabad, Gujarat', 'STUDENT', 35000, 720),
-('Vivek Joshi', '1997-02-14', 'Male', '9876500005', 'vivek@gmail.com', 'Nagpur, Maharashtra', 'EMPLOYED', 110000, 805),
-('Pooja Nair', '2000-11-30', 'Female', '9876500006', 'pooja@gmail.com', 'Bengaluru, Karnataka', 'EMPLOYED', 72000, 755),
-('Karan Verma', '1996-08-08', 'Male', '9876500007', 'karan@gmail.com', 'Delhi, India', 'SELF-EMPLOYED', 125000, 790),
-('Meera Iyer', '2002-01-25', 'Female', '9876500008', 'meera@gmail.com', 'Chennai, Tamil Nadu', 'EMPLOYED', 67000, 748),
-('Aditya Singh', '1998-05-17', 'Male', '9876500009', 'aditya@gmail.com', 'Jaipur, Rajasthan', 'EMPLOYED', 83000, 774),
-('Nidhi Gupta', '2001-03-09', 'Female', '9876500010', 'nidhi@gmail.com', 'Indore, Madhya Pradesh', 'EMPLOYED', 61000, 735),
-('Sahil Khan', '1995-07-22', 'Male', '9876500011', 'sahil@gmail.com', 'Hyderabad, Telangana', 'SELF-EMPLOYED', 98000, 716),
-('Ishita Rao', '2003-10-11', 'Female', '9876500012', 'ishita@gmail.com', 'Pune, Maharashtra', 'STUDENT', 30000, 701);
+INSERT INTO payment (loan_id, amount_paid, payment_date) VALUES 
+(1, 25000.00, '2025-07-15 10:30:00'),
+(1, 25000.00, '2025-08-15 11:15:00'),
+(2, 40000.00, '2025-09-10 14:00:00'),
+(2, 40000.00, '2025-10-10 09:45:00'),
+(3, 75000.00, '2024-07-10 16:20:00'),
+(3, 75000.00, '2025-01-10 12:00:00'),
+(4, 50000.00, '2025-04-01 10:00:00'),
+(5, 20000.00, '2025-05-20 15:30:00'),
+(7, 50000.00, '2024-11-15 11:00:00'),
+(7, 50000.00, '2025-05-15 10:00:00'),
+(8, 20000.00, '2025-10-12 13:10:00');
 
+INSERT INTO delinquency (loan_id, days_overdue, outstanding_amount, delinquency_date, risk_level, resolution_status) VALUES 
+(5, 120, 180000.00, '2025-09-01', 'HIGH', 'OPEN'),
+(1, 45, 250000.00, '2025-10-01', 'LOW', 'OPEN'),
+(4, 75, 750000.00, '2025-09-15', 'MEDIUM', 'OPEN'),
+(2, 35, 420000.00, '2024-12-01', 'LOW', 'RESOLVED');
 
--- =========================================================
--- INSERT LOANS
--- =========================================================
-
-INSERT INTO loan
-(customer_id, loan_type_id, employee_id, principal_amount, remaining_balance, interest_rate, tenure_months, start_date, application_date, approval_date, loan_status)
-VALUES
-(1, 1, 2, 300000, 300000, 12.50, 36, '2026-01-12', '2026-01-10', '2026-01-12', 'APPROVED'),
-(2, 2, 3, 500000, 500000, 9.50, 48, '2026-01-17', '2026-01-15', '2026-01-17', 'APPROVED'),
-(3, 5, 4, 1200000, 1200000, 11.25, 60, '2026-02-05', '2026-02-02', '2026-02-05', 'APPROVED'),
-(4, 2, 2, 250000, 250000, 9.50, 36, '2026-02-12', '2026-02-12', NULL, 'PENDING'),
-(5, 3, 4, 4500000, 4500000, 8.50, 180, '2026-02-24', '2026-02-20', '2026-02-24', 'APPROVED'),
-(6, 4, 3, 800000, 800000, 10.00, 60, '2026-03-03', '2026-03-01', '2026-03-03', 'APPROVED'),
-(7, 5, 2, 2000000, 2000000, 11.25, 72, '2026-03-08', '2026-03-08', NULL, 'PENDING'),
-(8, 1, 5, 150000, 150000, 12.50, 24, '2026-03-16', '2026-03-15', '2026-03-16', 'APPROVED'),
-(9, 4, 3, 950000, 950000, 10.00, 60, '2026-03-23', '2026-03-21', '2026-03-23', 'APPROVED'),
-(10, 1, 5, 200000, 200000, 12.50, 30, '2026-04-01', '2026-04-01', '2026-04-03', 'REJECTED'),
-(11, 6, 2, 300000, 300000, 10.75, 24, '2026-04-07', '2026-04-06', '2026-04-07', 'APPROVED'),
-(12, 2, 3, 150000, 150000, 9.50, 24, '2026-04-12', '2026-04-12', NULL, 'PENDING');
-
-
--- =========================================================
--- INSERT PAYMENTS
--- =========================================================
-
-INSERT INTO payment
-(loan_id, payment_date, amount_paid, payment_mode, payment_status)
-VALUES
-(1, '2026-02-10 10:00:00', 11000, 'UPI', 'SUCCESS'),
-(1, '2026-03-10 10:00:00', 11000, 'UPI', 'SUCCESS'),
-(1, '2026-04-10 10:00:00', 11000, 'NET BANKING', 'SUCCESS'),
-(2, '2026-02-20 10:00:00', 12500, 'UPI', 'SUCCESS'),
-(2, '2026-03-20 10:00:00', 12500, 'CARD', 'SUCCESS'),
-(3, '2026-03-05 10:00:00', 27000, 'NET BANKING', 'SUCCESS'),
-(5, '2026-03-24 10:00:00', 44300, 'BANK TRANSFER', 'SUCCESS'),
-(5, '2026-04-24 10:00:00', 44300, 'BANK TRANSFER', 'SUCCESS'),
-(6, '2026-04-05 10:00:00', 17000, 'UPI', 'SUCCESS'),
-(8, '2026-04-16 10:00:00', 7100, 'UPI', 'SUCCESS'),
-(9, '2026-04-23 10:00:00', 20200, 'CARD', 'SUCCESS'),
-(11, '2026-05-07 10:00:00', 14500, 'UPI', 'SUCCESS'),
-(11, '2026-06-07 10:00:00', 14500, 'UPI', 'SUCCESS');
-
-
--- =========================================================
--- INSERT DELINQUENCY RECORDS
--- =========================================================
-
-INSERT INTO delinquency
-(loan_id, days_overdue, outstanding_amount, delinquency_date, risk_level, resolution_status)
-VALUES
-(3, 8, 1175000, '2026-05-15', 'MEDIUM', 'OPEN'),
-(6, 22, 735000, '2026-05-20', 'HIGH', 'OPEN'),
-(9, 5, 920000, '2026-05-25', 'LOW', 'RESOLVED'),
-(11, 31, 270000, '2026-06-10', 'HIGH', 'OPEN');
+-- VERIFICATION PRINTS
+SHOW TABLES;
 SELECT * FROM customer;
-
--- 2. View all loans
 SELECT * FROM loan;
-
--- 3. View all payment records
 SELECT * FROM payment;
-
--- 4. View all delinquency records
 SELECT * FROM delinquency;
