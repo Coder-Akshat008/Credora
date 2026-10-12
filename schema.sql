@@ -2,11 +2,10 @@ DROP DATABASE IF EXISTS credora_db;
 CREATE DATABASE IF NOT EXISTS credora_db;
 USE credora_db;
 
--- 1. CUSTOMER TABLE
+-- 1. CUSTOMER TABLE (Restored full_name column)
 CREATE TABLE IF NOT EXISTS customer (
     customer_id INT AUTO_INCREMENT PRIMARY KEY,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
     dob DATE,
     gender ENUM('Male', 'Female', 'Other'),
     phone VARCHAR(20) NOT NULL,
@@ -64,20 +63,20 @@ CREATE TABLE IF NOT EXISTS delinquency (
 -- =========================================================
 
 INSERT INTO customer
-(first_name, last_name, dob, gender, phone, email, address, employment_status, monthly_income, credit_score)
+(full_name, dob, gender, phone, email, address, employment_status, monthly_income, credit_score)
 VALUES
-('Akshay', 'Kulkarni', '2002-04-18', 'Male', '9876500001', 'akshay@gmail.com', 'Pune, Maharashtra', 'EMPLOYED', 65000, 768),
-('Sneha', 'Patil', '2001-09-12', 'Female', '9876500002', 'sneha@gmail.com', 'Nashik, Maharashtra', 'EMPLOYED', 58000, 742),
-('Rohan', 'Deshmukh', '1999-12-05', 'Male', '9876500003', 'rohan@gmail.com', 'Mumbai, Maharashtra', 'SELF-EMPLOYED', 92000, 781),
-('Ananya', 'Shah', '2003-06-21', 'Female', '9876500004', 'ananya@gmail.com', 'Ahmedabad, Gujarat', 'STUDENT', 35000, 720),
-('Vivek', 'Joshi', '1997-02-14', 'Male', '9876500005', 'vivek@gmail.com', 'Nagpur, Maharashtra', 'EMPLOYED', 110000, 805),
-('Pooja', 'Nair', '2000-11-30', 'Female', '9876500006', 'pooja@gmail.com', 'Bengaluru, Karnataka', 'EMPLOYED', 72000, 755),
-('Karan', 'Verma', '1996-08-08', 'Male', '9876500007', 'karan@gmail.com', 'Delhi, India', 'SELF-EMPLOYED', 125000, 790),
-('Meera', 'Iyer', '2002-01-25', 'Female', '9876500008', 'meera@gmail.com', 'Chennai, Tamil Nadu', 'EMPLOYED', 67000, 748),
-('Aditya', 'Singh', '1998-05-17', 'Male', '9876500009', 'aditya@gmail.com', 'Jaipur, Rajasthan', 'EMPLOYED', 83000, 774),
-('Nidhi', 'Gupta', '2001-03-09', 'Female', '9876500010', 'nidhi@gmail.com', 'Indore, Madhya Pradesh', 'EMPLOYED', 61000, 735),
-('Sahil', 'Khan', '1995-07-22', 'Male', '9876500011', 'sahil@gmail.com', 'Hyderabad, Telangana', 'SELF-EMPLOYED', 98000, 716),
-('Ishita', 'Rao', '2003-10-11', 'Female', '9876500012', 'ishita@gmail.com', 'Pune, Maharashtra', 'STUDENT', 30000, 701);
+('Akshay Kulkarni', '2002-04-18', 'Male', '9876500001', 'akshay@gmail.com', 'Pune, Maharashtra', 'EMPLOYED', 65000, 768),
+('Sneha Patil', '2001-09-12', 'Female', '9876500002', 'sneha@gmail.com', 'Nashik, Maharashtra', 'EMPLOYED', 58000, 742),
+('Rohan Deshmukh', '1999-12-05', 'Male', '9876500003', 'rohan@gmail.com', 'Mumbai, Maharashtra', 'SELF-EMPLOYED', 92000, 781),
+('Ananya Shah', '2003-06-21', 'Female', '9876500004', 'ananya@gmail.com', 'Ahmedabad, Gujarat', 'STUDENT', 35000, 720),
+('Vivek Joshi', '1997-02-14', 'Male', '9876500005', 'vivek@gmail.com', 'Nagpur, Maharashtra', 'EMPLOYED', 110000, 805),
+('Pooja Nair', '2000-11-30', 'Female', '9876500006', 'pooja@gmail.com', 'Bengaluru, Karnataka', 'EMPLOYED', 72000, 755),
+('Karan Verma', '1996-08-08', 'Male', '9876500007', 'karan@gmail.com', 'Delhi, India', 'SELF-EMPLOYED', 125000, 790),
+('Meera Iyer', '2002-01-25', 'Female', '9876500008', 'meera@gmail.com', 'Chennai, Tamil Nadu', 'EMPLOYED', 67000, 748),
+('Aditya Singh', '1998-05-17', 'Male', '9876500009', 'aditya@gmail.com', 'Jaipur, Rajasthan', 'EMPLOYED', 83000, 774),
+('Nidhi Gupta', '2001-03-09', 'Female', '9876500010', 'nidhi@gmail.com', 'Indore, Madhya Pradesh', 'EMPLOYED', 61000, 735),
+('Sahil Khan', '1995-07-22', 'Male', '9876500011', 'sahil@gmail.com', 'Hyderabad, Telangana', 'SELF-EMPLOYED', 98000, 716),
+('Ishita Rao', '2003-10-11', 'Female', '9876500012', 'ishita@gmail.com', 'Pune, Maharashtra', 'STUDENT', 30000, 701);
 
 
 -- =========================================================
@@ -134,20 +133,6 @@ VALUES
 (6, 22, 735000, '2026-05-20', 'HIGH', 'OPEN'),
 (9, 5, 920000, '2026-05-25', 'LOW', 'RESOLVED'),
 (11, 31, 270000, '2026-06-10', 'HIGH', 'OPEN');
-
-
--- =========================================================
--- VERIFY DATABASE
--- =========================================================
-
-USE credora_db;
-
-SHOW TABLES;
-
-SELECT * FROM customer;
-SELECT * FROM loan;
-SELECT * FROM payment;
-SELECT * FROM delinquency;
 SELECT * FROM payment;
 
 SELECT * FROM delinquency;
