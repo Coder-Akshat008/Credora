@@ -581,9 +581,6 @@ public class CredoraApplication extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new CredoraApplication().setVisible(true));
-    }
+    SwingUtilities.invokeLater(() -> new CredoraApplication().setVisible(true));
 }
-        SwingUtilities.invokeLater(() -> new CredoraApplication().setVisible(true));
-    }
 }
